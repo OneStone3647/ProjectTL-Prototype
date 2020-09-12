@@ -3,6 +3,7 @@
 
 #include "PTLGameMode.h"
 #include "PTLPlayer.h"
+#include "PTLHUD.h"
 #include "PTLPlayerController.h"
 
 APTLGameMode::APTLGameMode()
@@ -12,6 +13,13 @@ APTLGameMode::APTLGameMode()
 	if (BP_PTLPlayer.Class != NULL)
 	{
 		DefaultPawnClass = BP_PTLPlayer.Class;
+	}
+
+	// HUD 설정
+	static ConstructorHelpers::FClassFinder<APTLHUD> BP_PTLHUD(TEXT("Blueprint'/Game/Blueprints/BP_PTLHUD.BP_PTLHUD_C'"));
+	if (BP_PTLHUD.Class != NULL)
+	{
+		HUDClass = BP_PTLHUD.Class;
 	}
 
 	// PlayerController 설정

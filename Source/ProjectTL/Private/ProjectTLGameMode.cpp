@@ -3,13 +3,17 @@
 #include "ProjectTLGameMode.h"
 #include "ProjectTLCharacter.h"
 #include "UObject/ConstructorHelpers.h"
+#include "PTLPlayerController.h"
 
 AProjectTLGameMode::AProjectTLGameMode()
 {
-	// set default pawn class to our Blueprinted character
+	// PlayerBP를 DefaultPawnClass로 설정합니다
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPersonCPP/Blueprints/ThirdPersonCharacter"));
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
+
+	// PTLPlayerController를 PlayerController 설정합니다.
+	PlayerControllerClass = APTLPlayerController::StaticClass();
 }

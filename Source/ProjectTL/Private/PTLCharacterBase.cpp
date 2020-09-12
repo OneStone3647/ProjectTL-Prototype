@@ -8,8 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "PTLCharacterAnimInstance.h"
-#include "..\Public\PTLCharacterBase.h"
+#include "PTLStatecomponent.h"
 
 APTLCharacterBase::APTLCharacterBase()
 {
@@ -26,10 +25,10 @@ APTLCharacterBase::APTLCharacterBase()
 	GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);		// 애니메이션 블루프린트를 사용하여 애니메이션을 재생합니다.
 
 	// 애니메이션 설정
-	static ConstructorHelpers::FClassFinder<UAnimInstance> PTLCharacter_Anim(TEXT("AnimBlueprint'/Game/Blueprints/AnimBP_PTLCharacterAnim.AnimBP_PTLCharacterAnim_C'"));
-	if (PTLCharacter_Anim.Succeeded())
+	static ConstructorHelpers::FClassFinder<UAnimInstance> Character_Anim(TEXT("AnimBlueprint'/Game/Blueprints/AnimBP_PTLCharacterAnim.AnimBP_PTLCharacterAnim_C'"));
+	if (Character_Anim.Succeeded())
 	{
-		GetMesh()->SetAnimInstanceClass(PTLCharacter_Anim.Class);
+		GetMesh()->SetAnimInstanceClass(Character_Anim.Class);
 	}
 
 	// 캡슐 콜리전 크기 설정
@@ -40,10 +39,8 @@ APTLCharacterBase::APTLCharacterBase()
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.f, 0.0f);	// 캐릭터의 회전 속도입니다.
 	GetCharacterMovement()->JumpZVelocity = 600.0f;						// 점프할 때 초기 속도입니다.
 	GetCharacterMovement()->AirControl = 0.2f;								// 떨어질 때 캐릭터에서 사용 가능한 측면 이동 제어의 양입니다
-}
 
-void APTLCharacterBase::BeginPlay()
-{
-	Super::BeginPlay();
-	
+	// StateComponent 설정
+	StateComponent = CreateDefaultSubobject<UPTLStateComponent>(TEXT("StateComponent"));
+	StateComponent->SetIsDead(false);
 }

@@ -5,14 +5,19 @@
  *=========================================================================*/
 
 #include "PTLPlayer.h"
+#include "PTLEnemy.h"
+#include "PTLStateComponent.h"
+#include "PTLPlayerController.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "PTLTargetLockComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 APTLPlayer::APTLPlayer()
 {
-	// Tick을 사용하지 않기 때문에 true로 설정합니다.
+	// Tick함수를 사용하기 때문에 true로 설정합니다.
 	PrimaryActorTick.bCanEverTick = true;
 
 	BaseTurnRate = 45.0f;
@@ -28,19 +33,46 @@ APTLPlayer::APTLPlayer()
 	CameraBoom->SetRelativeLocation(FVector(0.0f, 0.0f, 60.0f));
 	CameraBoom->SocketOffset = FVector(0.0f, 0.0f, 15.0f);
 	CameraBoom->TargetArmLength = 400.0f;
-	CameraBoom->bUsePawnControlRotation = true;			// 컨프롤러를 기준으로 회전합니다.
+	CameraBoom->bUsePawnControlRotation = true;													// 컨프롤러를 기준으로 회전합니다.
 	CameraBoom->bEnableCameraLag = true;
 	CameraBoom->CameraLagSpeed = 5.0f;
 
 	// 카메라 설정
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;		// 스프링 암 기준으로 회전하지 않습니다.
+	FollowCamera->bUsePawnControlRotation = false;												// 스프링 암 기준으로 회전하지 않습니다.
+
+	// TargetLockComponent 설정
+	TargetLockComponent = CreateDefaultSubobject<UPTLTargetLockComponent>(TEXT("TargetLockComponent"));
 }
 
 void APTLPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (TargetLockComponent->GetLockOnTargetFlag())
+	{
+		AActor* TargetActor = TargetLockComponent->GetTargetActor();
+		if (IsValid(TargetActor))
+		{
+			APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
+			if (!TargetEnemy->GetStateComponent()->GetIsDead())
+			{
+				APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+				PlayerController->SetControlRotation(TargetLockComponent->RInterpToTarget());
+			}
+			else
+			{
+				TargetLockComponent->UnlockTarget();
+				TargetLockComponent->LockOnTarget();
+			}
+		}
+		else
+		{
+			TargetLockComponent->UnlockTarget();
+			TargetLockComponent->LockOnTarget();
+		}
+	}
 }
 
 void APTLPlayer::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
@@ -54,16 +86,16 @@ void APTLPlayer::SetupPlayerInputComponent(UInputComponent * PlayerInputComponen
 	PlayerInputComponent->BindAxis("MoveRight", this, &APTLPlayer::MoveRight);
 
 	// 마우스 입력
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Turn", this, &APTLPlayer::Turn);
+	PlayerInputComponent->BindAxis("LookUp", this, &APTLPlayer::LookUp);
 	// 게임페드 입력
 	PlayerInputComponent->BindAxis("TurnRate", this, &APTLPlayer::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &APTLPlayer::LookUpAtRate);
 
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &APTLPlayer::Attack);
 
-	//PlayerInputComponent->BindAction("SetDebug", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::SetDebug);
-	//PlayerInputComponent->BindAction("TargetLock", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::LockToTarget);
+	PlayerInputComponent->BindAction("TriggerDebug", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::SetDebug);
+	PlayerInputComponent->BindAction("TargetLock", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnTarget);
 	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchLeft", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::LockToSwitchTarget, EDirection::Left);
 	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchRight", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::LockToSwitchTarget, EDirection::Right);
 }
@@ -97,16 +129,39 @@ void APTLPlayer::MoveRight(float Value)
 	}
 }
 
+void APTLPlayer::Turn(float Value)
+{
+	if (!TargetLockComponent->GetLockOnTargetFlag())
+	{
+		APawn::AddControllerYawInput(Value);
+	}
+}
+
+void APTLPlayer::LookUp(float Value)
+{
+	if (!TargetLockComponent->GetLockOnTargetFlag())
+	{
+		APawn::AddControllerPitchInput(Value);
+	}
+}
+
 void APTLPlayer::TurnAtRate(float Rate)
 {
-	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	if (!TargetLockComponent->GetLockOnTargetFlag())
+	{
+		AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void APTLPlayer::LookUpAtRate(float Rate)
 {
-	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	if (!TargetLockComponent->GetLockOnTargetFlag())
+	{
+		AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void APTLPlayer::Attack()
 {
+	LOG_SCREEN("Attack!!");
 }
