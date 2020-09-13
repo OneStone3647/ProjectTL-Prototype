@@ -96,8 +96,8 @@ void APTLPlayer::SetupPlayerInputComponent(UInputComponent * PlayerInputComponen
 
 	PlayerInputComponent->BindAction("TriggerDebug", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::SetDebug);
 	PlayerInputComponent->BindAction("TargetLock", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnTarget);
-	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchLeft", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::LockToSwitchTarget, EDirection::Left);
-	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchRight", IE_Pressed, CameraLockArm, &UTLSpringArmComponent::LockToSwitchTarget, EDirection::Right);
+	PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchLeft", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnSwitchTarget, EDirection::Left);
+	PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchRight", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnSwitchTarget, EDirection::Right);
 }
 
 void APTLPlayer::MoveForward(float Value)
@@ -163,5 +163,13 @@ void APTLPlayer::LookUpAtRate(float Rate)
 
 void APTLPlayer::Attack()
 {
-	LOG_SCREEN("Attack!!");
+	AActor* TargetActor = TargetLockComponent->GetTargetActor();
+	if (IsValid(TargetActor))
+	{
+		APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
+		if (TargetEnemy)
+		{
+			TargetEnemy->IsDead();
+		}
+	}
 }

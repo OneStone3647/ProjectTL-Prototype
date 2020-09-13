@@ -57,6 +57,20 @@ void UPTLTargetLockComponent::LockOnTarget()
 // 변경된 Target을 조준합니다.
 void UPTLTargetLockComponent::LockOnSwitchTarget(EDirection Direction)
 {
+	if (bLockedOnTarget)
+	{
+		AActor* NewTargetActor = SwitchTarget(Direction);
+		if (NewTargetActor)
+		{
+			TargetActor = NewTargetActor;
+
+			if (bDrawDebug)
+			{
+				APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
+				DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Red, false, DebugLifeTime);
+			}
+		}
+	}
 }
 
 // Target을 해제합니다.
@@ -121,7 +135,7 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 	float NearestDot = 0.0f;
 	AActor* NearestTargetActor = nullptr;
 	APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
-	for (int32 i = 0; i < TargetableActors.Num(); i++)
+	for (int32 i = 0; i < TargetableActors.Num(); ++i)
 	{
 		/*-----------------------------------------------------------------------------------------------------------------------------------*
 		 * float GetDotProductTo
@@ -158,7 +172,73 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 // Target을 변경합니다.
 AActor * UPTLTargetLockComponent::SwitchTarget(EDirection Direction)
 {
-	return nullptr;
+	AActor* NewTarget = nullptr;
+
+	if (bLockedOnTarget)
+	{
+		TArray<AActor*> TargetableActors = GetTargetableActors();
+		int32 CurrentTargetIndex = TargetableActors.Find(TargetActor);
+		// 현재 타겟의 Index를 발견하였다면 배열에서 제거합니다.
+		if (CurrentTargetIndex != INDEX_NONE)
+		{
+			TargetableActors.Remove(TargetActor);
+		}
+
+		// 현재 타겟을 기준으로 좌우에 있는 타겟을 탐색합니다.
+		TArray<AActor*> LeftTargetableActors;
+		TArray<AActor*> RightTargetableActors;
+		APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+		for (int32 i = 0; i < TargetableActors.Num(); ++i)
+		{
+			/*-----------------------------------------------------------------------------------------------------------------------------------*
+			 * 벡터의 뺄셈을 활용하여 내가 타겟을 바라보는 방향을 구합니다.
+			 * 내가 타겟을 바라보는 방향 = 타겟의 위치 - 자신의 위치
+			 *-----------------------------------------------------------------------------------------------------------------------------------*/
+			FVector TargetableActorVector = TargetableActors[i]->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
+			FVector CurrentTargetActorVector = TargetActor->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
+
+			// 두 벡터의 외적을 반환합니다.
+			FVector CrossVector = FVector::CrossProduct(CurrentTargetActorVector, TargetableActorVector);
+			// 정규화한 벡터의 Z축으로 좌우에 존재하는지 판별합니다.
+			if (CrossVector.GetSafeNormal().Z < 0.0f)
+			{
+				// LeftTargetableActors 배열에 존재하지 않으면 추가합니다.
+				LeftTargetableActors.AddUnique(TargetableActors[i]);
+			}
+			else
+			{
+				// RightTargetableActors 배열에 존재하지 않으면 추가합니다.
+				RightTargetableActors.AddUnique(TargetableActors[i]);
+			}
+		}
+
+		switch (Direction)
+		{
+		case EDirection::Left:
+			if (LeftTargetableActors.Num() > 0)
+			{
+				NewTarget = SetTarget(LeftTargetableActors);
+			}
+			else
+			{
+				NewTarget = SetTarget(RightTargetableActors);
+			}
+			break;
+		case EDirection::Right:
+			if (RightTargetableActors.Num() > 0)
+			{
+				NewTarget = SetTarget(RightTargetableActors);
+			}
+			else
+			{
+				NewTarget = SetTarget(LeftTargetableActors);
+			}
+			break;
+		}
+
+	}
+
+	return NewTarget;
 }
 
 // Target에 대해 회전보간값을 계산합니다.
