@@ -34,11 +34,41 @@ private:
 	class UCameraComponent* FollowCamera;
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera)
 	float BaseTurnRate;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera)
 	float BaseLookUpRate;
+
+	/* Tolerance for a mouse movement to be considered an input to switch targets */
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float TargetSwitchMouseDelta;
+
+	/* Tolerance for a mouse movement to be considered an input to switch targets */
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float TargetSwitchAnalogValue;
+
+	/* True if player returned analog-stick to center after last target switch */
+	bool bAnalogSettledSinceLastTargetSwitch;
+
+	/* Cooldown time before another target switch can occur, used to make target switching more controllable */
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float TargetSwitchMinDelaySeconds;
+
+	// 마지막으로 타겟을 바꾼 시간
+	UPROPERTY(BlueprintReadOnly, Category = Camera)
+	float LastTargetSwitchTime;
+
+	/* Tolerance for a mouse movement to be considered an input to break target lock */
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float BreakLockMouseDelta;
+
+	/* Time to wait after breaking lock with mouse movement before player gets control of the camera back.  Prevents over scrolling camera after breaking lock. */
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float BrokeLockAimingCooldown;
+
+	/* Time that player broke camera lock at */
+	float BrokeLockTime;
 
 	// Get함수 FORCEINLINE 매크로로 inline함수로 작성
 public:

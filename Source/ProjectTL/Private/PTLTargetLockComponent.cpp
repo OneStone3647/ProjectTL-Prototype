@@ -11,6 +11,7 @@
 #include "PTLEnemy.h"
 #include "PTLPlayer.h"
 #include "PTLPlayerController.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"		// FindLookAtRotation() 함수를 사용하기 위해 필요한 헤더 파일
 #include "Kismet/GameplayStatics.h"			// GetPlayerCameraManager() 함수를 사용하기 위해 필요한 헤더 파일
@@ -57,18 +58,19 @@ void UPTLTargetLockComponent::LockOnTarget()
 // 변경된 Target을 조준합니다.
 void UPTLTargetLockComponent::LockOnSwitchTarget(EDirection Direction)
 {
-	if (bLockedOnTarget)
+	AActor* NewTargetActor = SwitchTarget(Direction);
+	if (NewTargetActor)
 	{
-		AActor* NewTargetActor = SwitchTarget(Direction);
-		if (NewTargetActor)
-		{
-			TargetActor = NewTargetActor;
+		TargetActor = NewTargetActor;
+		bLockedOnTarget = true;
+		APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
+		Player->GetCharacterMovement()->bOrientRotationToMovement = false;
+		Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
 
-			if (bDrawDebug)
-			{
-				APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
-				DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Red, false, DebugLifeTime);
-			}
+		if (bDrawDebug)
+		{
+			APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
+			DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Red, false, DebugLifeTime);
 		}
 	}
 }
@@ -78,6 +80,9 @@ void UPTLTargetLockComponent::UnlockTarget()
 {
 	TargetActor = nullptr;
 	bLockedOnTarget = false;
+	APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
+	Player->GetCharacterMovement()->bOrientRotationToMovement = true;
+	Player->GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
 // 조준 가능한 Target의 배열 생성합니다.
