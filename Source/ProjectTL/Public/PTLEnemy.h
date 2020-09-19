@@ -24,13 +24,10 @@ protected:
 #pragma region Target
 
 protected:
-	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category = Target, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category = Target)
 	class UPTLTargetComponent* TargetComponent;
 
-	// Get함수 FORCEINLINE 매크로로 Inline함수로 작성
 public:
-	// TargetComponent Get함수
-	UFUNCTION(BlueprintCallable, Category = "Target")			// 임시로 사용하는 블루프린트 함수 선언
 	FORCEINLINE class UPTLTargetComponent* GetTargetComponent() const
 	{
 		return TargetComponent;
@@ -41,7 +38,7 @@ public:
 #pragma region TextRender
 
 protected:
-	UPROPERTY(VisibleAnywhere, BluePrintReadWrite, Category = TextRender, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BluePrintReadWrite, Category = TextRender)
 	class UTextRenderComponent* ActorNameText;
 
 protected:

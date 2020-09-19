@@ -34,43 +34,12 @@ private:
 	class UCameraComponent* FollowCamera;
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseTurnRate;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseLookUpRate;
 
-	/* Tolerance for a mouse movement to be considered an input to switch targets */
-	UPROPERTY(EditDefaultsOnly, Category = Camera)
-	float TargetSwitchMouseDelta;
-
-	/* Tolerance for a mouse movement to be considered an input to switch targets */
-	UPROPERTY(EditDefaultsOnly, Category = Camera)
-	float TargetSwitchAnalogValue;
-
-	/* True if player returned analog-stick to center after last target switch */
-	bool bAnalogSettledSinceLastTargetSwitch;
-
-	/* Cooldown time before another target switch can occur, used to make target switching more controllable */
-	UPROPERTY(EditDefaultsOnly, Category = Camera)
-	float TargetSwitchMinDelaySeconds;
-
-	// 마지막으로 타겟을 바꾼 시간
-	UPROPERTY(BlueprintReadOnly, Category = Camera)
-	float LastTargetSwitchTime;
-
-	/* Tolerance for a mouse movement to be considered an input to break target lock */
-	UPROPERTY(EditDefaultsOnly, Category = Camera)
-	float BreakLockMouseDelta;
-
-	/* Time to wait after breaking lock with mouse movement before player gets control of the camera back.  Prevents over scrolling camera after breaking lock. */
-	UPROPERTY(EditDefaultsOnly, Category = Camera)
-	float BrokeLockAimingCooldown;
-
-	/* Time that player broke camera lock at */
-	float BrokeLockTime;
-
-	// Get함수 FORCEINLINE 매크로로 inline함수로 작성
 public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const
 	{
@@ -84,15 +53,35 @@ public:
 
 #pragma endregion
 
-#pragma region Target
+#pragma region TargetLock
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = Target)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = TargetLock, meta = (AllowPrivateAccess = "true"))
 	class UPTLTargetLockComponent* TargetLockComponent;
 
-	// Get함수 FORCEINLINE 매크로로 inline함수로 작성
+private:
+	// 타겟을 전환하기위해 필요한 마우스 움직임의 값
+	UPROPERTY(EditDefaultsOnly, Category = TargetLock)
+	float TargetSwitchMouseValue;
+
+	// 타겟을 전환하기 위해 필요한 아날로그 스틱 움직임의 값
+	UPROPERTY(EditDefaultsOnly, Category = TargetLock)
+	float TargetSwitchAnalogValue;
+
+	// 마지막 타겟 전환 후 아날로그 스틱을 중앙으로 되돌리면 true
+	UPROPERTY(VisibleInstanceOnly, Category = TargetLock)
+	bool bAnalogSettledSinceLastTargetSwitch;
+
+	// 다른 타겟으로 전환하기 전의 쿨타임
+	// 너무 빠르게 다음 타겟으로 넘어가는 것을 방지합니다.
+	UPROPERTY(EditDefaultsOnly, Category = TargetLock)
+	float TargetSwitchMinDelaySeconds;
+
+	// 마지막으로 타겟을 바꾼 시간
+	UPROPERTY(EditDefaultsOnly, Category = TargetLock)
+	float LastTargetSwitchTime;
+
 public:
-	UFUNCTION(BlueprintCallable, Category = "Target")			// 임시로 사용하는 블루프린트 함수 선언
 	FORCEINLINE UPTLTargetLockComponent* GetTargetLockComponent() const
 	{
 		return TargetLockComponent;
@@ -110,8 +99,8 @@ protected:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 
-#pragma endregion
-
 private:
 	void Attack();
+
+#pragma endregion
 };

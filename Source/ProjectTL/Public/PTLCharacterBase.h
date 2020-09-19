@@ -19,13 +19,10 @@ public:
 	APTLCharacterBase();
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = State, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = State)
 	class UPTLStateComponent* StateComponent;
 
-	// Get함수 FORCEINLINE 매크로로 Inline함수로 작성
 public:
-	// StateComponent Get함수
-	UFUNCTION(BlueprintCallable, Category = "State")			// 임시로 사용하는 블루프린트 함수 선언
 	FORCEINLINE class UPTLStateComponent* GetStateComponent() const
 	{
 		return StateComponent;

@@ -8,7 +8,6 @@
 
 UPTLStateComponent::UPTLStateComponent()
 {
-	// TickComponent함수를 사용하지 않기 때문에 false로 설정합니다.
 	PrimaryComponentTick.bCanEverTick = false;
 
 	bIsDead = false;

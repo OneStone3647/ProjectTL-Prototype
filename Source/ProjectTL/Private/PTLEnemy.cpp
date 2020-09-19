@@ -11,7 +11,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Camera/PlayerCameraManager.h"
-#include "Kismet/GameplayStatics.h"						// GetPlayerCameraManager를 사용하기 위한 헤더 파일
+#include "Kismet/GameplayStatics.h"
 
 APTLEnemy::APTLEnemy()
 {
@@ -39,7 +39,6 @@ void APTLEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// TextRender를 플레이어 카메라를 바라보도록 출력합니다.
 	PrintText();
 }
 

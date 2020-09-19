@@ -4,7 +4,7 @@
 #include "Modules/ModuleManager.h"
 
 // 로그 카테고리 정의
-DEFINE_LOG_CATEGORY(PTL_LOG);
+DEFINE_LOG_CATEGORY(ProjectTL_Log);
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, ProjectTL, "ProjectTL" );
  

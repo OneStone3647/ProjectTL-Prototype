@@ -8,11 +8,11 @@
 #include "PTLEnemy.h"
 #include "PTLStateComponent.h"
 #include "PTLPlayerController.h"
+#include "PTLTargetLockComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "PTLTargetLockComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 APTLPlayer::APTLPlayer()
@@ -22,11 +22,9 @@ APTLPlayer::APTLPlayer()
 
 	BaseTurnRate = 45.0f;
 	BaseLookUpRate = 45.0f;
-	TargetSwitchMouseDelta = 3.0f;
+	TargetSwitchMouseValue = 3.0f;
 	TargetSwitchAnalogValue = 0.2f;
 	TargetSwitchMinDelaySeconds = 0.5f;
-	BreakLockMouseDelta = 10.0f;
-	BrokeLockAimingCooldown = 0.5f;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -140,14 +138,8 @@ void APTLPlayer::Turn(float Value)
 
 	if (TargetLockComponent->GetLockOnTargetFlag())
 	{
-		if (FMath::Abs(Value) > BreakLockMouseDelta)
-		{
-			TargetLockComponent->UnlockTarget();
-			BrokeLockTime = GetWorld()->GetRealTimeSeconds();
-		}
-		// Should try switch target?
-		else if (FMath::Abs(Value) > TargetSwitchMouseDelta
-			&& TimeSinceLastTargetSwitch > TargetSwitchMinDelaySeconds) // Prevent switching multiple times using a single movement
+		// 한 번의 움직임으로 여러 번 전환 되는 것을 방지합니다.
+		if (FMath::Abs(Value) > TargetSwitchMouseValue	&& TimeSinceLastTargetSwitch > TargetSwitchMinDelaySeconds)
 		{
 			if (Value < 0)
 			{
@@ -163,12 +155,7 @@ void APTLPlayer::Turn(float Value)
 	}
 	else
 	{
-		// If camera lock was recently broken by a large mouse delta, allow a cooldown time to prevent erratic camera movement
-		bool bRecentlyBrokeLock = (GetWorld()->GetRealTimeSeconds() - BrokeLockTime) < BrokeLockAimingCooldown;
-		if (!bRecentlyBrokeLock)
-		{
-			APawn::AddControllerYawInput(Value);
-		}
+		APawn::AddControllerYawInput(Value);
 	}
 }
 
@@ -182,7 +169,7 @@ void APTLPlayer::LookUp(float Value)
 
 void APTLPlayer::TurnAtRate(float Rate)
 {
-	// Ensure the analog stick returned to neutral since last target switch attempt
+	// 마지막 타겟 전환 후 아날로그 스틱이 중립으로 돌아 왔는지 확인합니다.
 	if (FMath::Abs(Rate) < 0.1f)
 	{
 		bAnalogSettledSinceLastTargetSwitch = true;
@@ -208,22 +195,6 @@ void APTLPlayer::TurnAtRate(float Rate)
 			AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 		}
 	}
-
-	//if (TargetLockComponent->GetLockOnTargetFlag() && FMath::Abs(Rate) > TargetSwitchAnalogValue)
-	//{
-	//	if (Rate < 0)
-	//	{
-	//		TargetLockComponent->LockOnSwitchTarget(EDirection::Left);
-	//	}
-	//	else
-	//	{
-	//		TargetLockComponent->LockOnSwitchTarget(EDirection::Right);
-	//	}
-	//}
-	//else
-	//{
-	//	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
-	//}
 }
 
 void APTLPlayer::LookUpAtRate(float Rate)

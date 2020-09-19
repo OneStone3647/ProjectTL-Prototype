@@ -32,43 +32,38 @@ public:
 	UPTLTargetLockComponent();
 
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Target, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = TargetLock, meta = (AllowPrivateAccess = "true"))
 	class AActor* TargetActor;
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = Target)
+	UPROPERTY(VisibleAnywhere, Category = TargetLock)
 	bool bLockedOnTarget;
 
 	// 디버그 설정 변수
-	UPROPERTY(VisibleAnywhere, Category = Target)
+	UPROPERTY(EditAnywhere, Category = TargetLock)
 	bool bDrawDebug;
 
 	// 디버그 시간
-	UPROPERTY(VisibleAnywhere, Category = Target)
+	UPROPERTY(EditAnywhere, Category = TargetLock)
 	float DebugLifeTime;
 
 	// Traget을 탐색할 최대 거리
-	UPROPERTY(VisibleAnywhere, Category = Target)
+	UPROPERTY(EditAnywhere, Category = TargetLock)
 	float MaxTargetDistance;
 
 public:
-	// Target을 조준합니다.
 	void LockOnTarget();
 
-	// 변경된 Target을 조준합니다.
 	void LockOnSwitchTarget(EDirection Direction);
 
-	// Target을 해제합니다.
 	void UnlockTarget();
 
 private:
-	// 조준 가능한 Target의 배열 생성합니다.
+	// 조준 가능한 Target의 배열을 생성합니다.
 	TArray<AActor*> GetTargetableActors();
 
-	// Target을 설정합니다.
 	AActor* SetTarget(TArray<AActor*> TargetableActors);
 
-	// Target을 변경합니다.
 	AActor* SwitchTarget(EDirection Direction);
 
 public:
@@ -76,12 +71,9 @@ public:
 	FRotator RInterpToTarget();
 
 public:
-	// 디버그를 설정합니다.
 	void SetDebug();
 
-	// Get함수 FORCEINLINE 매크로로 inline함수로 작성
 public:
-	UFUNCTION(BlueprintCallable, Category = "Target")			// 임시로 사용하는 블루프린트 함수 선언
 	FORCEINLINE AActor* GetTargetActor() const
 	{
 		return TargetActor;

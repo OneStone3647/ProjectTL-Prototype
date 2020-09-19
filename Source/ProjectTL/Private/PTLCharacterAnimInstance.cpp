@@ -15,7 +15,6 @@ UPTLCharacterAnimInstance::UPTLCharacterAnimInstance()
 	CurrentCharacterSpeed = 0.0f;
 }
 
-// 틱마다 호출되는 함수입니다.
 void UPTLCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);

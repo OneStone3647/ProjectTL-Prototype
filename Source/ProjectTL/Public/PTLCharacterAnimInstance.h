@@ -22,7 +22,6 @@ public:
 	UPTLCharacterAnimInstance();
 	
 public:
-	// 틱마다 호출되는 함수입니다.
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 private:

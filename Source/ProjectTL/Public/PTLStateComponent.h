@@ -20,10 +20,9 @@ public:
 	UPTLStateComponent();
 
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = State, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = State, meta = (AllowPrivateAccess = "true"))
 	bool bIsDead;
 
-	// Get함수 FORCEINLINE 매크로로 inline함수로 작성
 public:
 	FORCEINLINE bool GetIsDead() const
 	{

@@ -25,7 +25,7 @@ public:
 	virtual void DrawHUD() override;
 
 private:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Indicator, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = Indicator, meta = (AllowPrivateAccess = "true"))
 	UTexture* IndicatorTexture;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Indicator, meta = (AllowPrivateAccess = "true"))

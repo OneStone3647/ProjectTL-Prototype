@@ -6,20 +6,18 @@
  *=========================================================================*/
 
 #include "PTLTargetLockComponent.h"
-#include "PTLStateComponent.h"
-#include "PTLTargetComponent.h"
-#include "PTLEnemy.h"
 #include "PTLPlayer.h"
 #include "PTLPlayerController.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "PTLEnemy.h"
+#include "PTLStateComponent.h"
+#include "PTLTargetComponent.h"
 #include "DrawDebugHelpers.h"
-#include "Kismet/KismetMathLibrary.h"		// FindLookAtRotation() 함수를 사용하기 위해 필요한 헤더 파일
-#include "Kismet/GameplayStatics.h"			// GetPlayerCameraManager() 함수를 사용하기 위해 필요한 헤더 파일
-
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 UPTLTargetLockComponent::UPTLTargetLockComponent()
 {
-	// TickComponent함수를 사용하하지 않기 때문에 false로 설정합니다.
 	PrimaryComponentTick.bCanEverTick = false;
 
 	TargetActor = nullptr;
@@ -46,6 +44,10 @@ void UPTLTargetLockComponent::LockOnTarget()
 			TargetActor = NewTargetActor;
 			bLockedOnTarget = true;
 
+			APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
+			Player->GetCharacterMovement()->bOrientRotationToMovement = false;
+			Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+
 			if (bDrawDebug)
 			{
 				APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
@@ -63,6 +65,7 @@ void UPTLTargetLockComponent::LockOnSwitchTarget(EDirection Direction)
 	{
 		TargetActor = NewTargetActor;
 		bLockedOnTarget = true;
+
 		APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
 		Player->GetCharacterMovement()->bOrientRotationToMovement = false;
 		Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
@@ -75,7 +78,6 @@ void UPTLTargetLockComponent::LockOnSwitchTarget(EDirection Direction)
 	}
 }
 
-// Target을 해제합니다.
 void UPTLTargetLockComponent::UnlockTarget()
 {
 	TargetActor = nullptr;
@@ -85,7 +87,7 @@ void UPTLTargetLockComponent::UnlockTarget()
 	Player->GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
-// 조준 가능한 Target의 배열 생성합니다.
+// 조준 가능한 Target의 배열을 생성합니다.
 TArray<AActor*> UPTLTargetLockComponent::GetTargetableActors()
 {
 	TArray<FHitResult> HitResult;
@@ -112,7 +114,7 @@ TArray<AActor*> UPTLTargetLockComponent::GetTargetableActors()
 				if (bDrawDebug)
 				{
 					DrawDebugPoint(GetWorld(), HitedActor->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Green, false, DebugLifeTime);
-					LOG_SCREEN("Hit Actor: %s", *HitedActor->GetName());
+					PTL_LOG_SCREEN("Hit Actor: %s", *HitedActor->GetName());
 				}
 
 				// 중복되지 않게 TargetLockableActors 배열에 넣습니다.
@@ -122,13 +124,12 @@ TArray<AActor*> UPTLTargetLockComponent::GetTargetableActors()
 	}
 	else
 	{
-		LOG_SCREEN("Hit Failed!!");
+		PTL_LOG_SCREEN("Hit Failed!!");
 	}
 
 	return TargetLockableActors;
 }
 
-// Target을 설정합니다.
 AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 {
 	// 조준 가능한 Target이 없을 경우 nullptr을 반환합니다.
@@ -169,12 +170,11 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 		}
 	}
 
-	LOG_SCREEN("TargetActor: %s", *NearestTargetActor->GetName());
+	PTL_LOG_SCREEN("TargetActor: %s", *NearestTargetActor->GetName());
 
 	return NearestTargetActor;
 }
 
-// Target을 변경합니다.
 AActor * UPTLTargetLockComponent::SwitchTarget(EDirection Direction)
 {
 	AActor* NewTarget = nullptr;
@@ -263,17 +263,16 @@ FRotator UPTLTargetLockComponent::RInterpToTarget()
 	return RInterpToRotator;
 }
 
-// 디버그를 설정합니다.
 void UPTLTargetLockComponent::SetDebug()
 {	
 	if (bDrawDebug)
 	{
 		bDrawDebug = false;
-		LOG_SCREEN("DrawDebug Disabled!!");
+		PTL_LOG_SCREEN("DrawDebug Disabled!!");
 	}
 	else
 	{
 		bDrawDebug = true;
-		LOG_SCREEN("DrawDebug Enabled!!");
+		PTL_LOG_SCREEN("DrawDebug Enabled!!");
 	}
 }
