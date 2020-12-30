@@ -1,10 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-/*=========================================================================*
- * 타겟락 기능을 가진 액터 컴포넌트입니다.
- * 일정 범위 내의 타겟을 검색하고 그 중 한 타겟을 스프링암을 통해 바라보게 합니다.
- *=========================================================================*/
-
 #include "PTLTargetLockComponent.h"
 #include "PTLPlayer.h"
 #include "PTLPlayerController.h"
@@ -18,119 +13,128 @@
 
 UPTLTargetLockComponent::UPTLTargetLockComponent()
 {
+	// TickComponent를 사용하지 않습니다.
 	PrimaryComponentTick.bCanEverTick = false;
 
-	TargetActor = nullptr;
-	bLockedOnTarget = false;
-
 	bDrawDebug = false;
-	DebugLifeTime = 2.0f;
+	DrawDebugTime = 2.0f;
+
+	bIsLockOnTarget = false;
+	TargetActor = nullptr;
 	MaxTargetDistance = 1000.0f;
 }
 
-// Target을 조준합니다.
-void UPTLTargetLockComponent::LockOnTarget()
-{
-	if (TargetActor && bLockedOnTarget)
+void UPTLTargetLockComponent::SetDebug()
+{	
+	if (bDrawDebug)
 	{
-		// Target이 있을 경우 TargetActor를 비웁니다.
-		UnlockTarget();
+		bDrawDebug = false;
+		PTL_LOG_SCREEN("DrawDebug Disabled!!");
 	}
 	else
 	{
-		AActor* NewTargetActor = SetTarget(GetTargetableActors());
-		if (NewTargetActor)
-		{
-			TargetActor = NewTargetActor;
-			bLockedOnTarget = true;
-
-			APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
-			Player->GetCharacterMovement()->bOrientRotationToMovement = false;
-			Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-
-			if (bDrawDebug)
-			{
-				APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
-				DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Red, false, DebugLifeTime);
-			}
-		}
+		bDrawDebug = true;
+		PTL_LOG_SCREEN("DrawDebug Enabled!!");
 	}
 }
 
-// 변경된 Target을 조준합니다.
-void UPTLTargetLockComponent::LockOnSwitchTarget(EDirection Direction)
+void UPTLTargetLockComponent::LockOnTarget()
 {
-	AActor* NewTargetActor = SwitchTarget(Direction);
-	if (NewTargetActor)
+	// Traget을 LockOn하고 있을 경우 LockOn을 해제합니다.
+	if (TargetActor && bIsLockOnTarget)
 	{
-		TargetActor = NewTargetActor;
-		bLockedOnTarget = true;
+		UnLockOnTarget();
+	}
+	else
+	{
+		TArray<AActor*> TargetableActors = GetTargetableActors();
+		AActor* NewTargetActor = GetNearestTargetActor(TargetableActors);
 
-		APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
-		Player->GetCharacterMovement()->bOrientRotationToMovement = false;
-		Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-
-		if (bDrawDebug)
-		{
-			APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
-			DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Red, false, DebugLifeTime);
-		}
+		SetTargetActor(NewTargetActor);
 	}
 }
 
-void UPTLTargetLockComponent::UnlockTarget()
+void UPTLTargetLockComponent::SwitchLockOnTarget(EDirection NewDirection)
+{
+	AActor* NewTargetActor = GetNearestTargetActorToDirection(NewDirection);
+
+	SetTargetActor(NewTargetActor);
+}
+
+void UPTLTargetLockComponent::UnLockOnTarget()
 {
 	TargetActor = nullptr;
-	bLockedOnTarget = false;
-	APTLPlayer* Player = Cast<APTLPlayer>(GetOwner());
-	Player->GetCharacterMovement()->bOrientRotationToMovement = true;
-	Player->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	bIsLockOnTarget = false;
+
+	APTLCharacterBase* Player = Cast<APTLCharacterBase>(GetOwner());
+	if (Player)
+	{
+		Player->GetCharacterMovement()->bOrientRotationToMovement = true;
+		Player->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	}
 }
 
-// 조준 가능한 Target의 배열을 생성합니다.
-TArray<AActor*> UPTLTargetLockComponent::GetTargetableActors()
+FRotator UPTLTargetLockComponent::RInterpToTarget()
 {
-	TArray<FHitResult> HitResult;
-	FVector PlayerLocation = GetOwner()->GetActorLocation();
+	FRotator RInterpToRotator;
+	float InterpSpeed = 5.0f;
 
-	// 타겟범위를 드로우 디버그합니다.
-	if (bDrawDebug)
+	APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	if (PlayerController)
 	{
-		DrawDebugSphere(GetWorld(), PlayerLocation, MaxTargetDistance, 50.0f, FColor::Green, false, DebugLifeTime);
+		FRotator PlayerControllerRotator = PlayerController->GetControlRotation();
+		FVector PlayerLocation = GetOwner()->GetActorLocation();
+		FVector TargetLocation = TargetActor->GetActorLocation();
+
+		// 2개의 위치 벡터를 입력하여 2번째 위치 벡터를 바라보는 방향정보(Rotator)를 반환합니다.
+		FRotator TargetRotator = UKismetMathLibrary::FindLookAtRotation(PlayerLocation, TargetLocation);
+
+		RInterpToRotator = FMath::RInterpTo(PlayerControllerRotator, TargetRotator, GetWorld()->GetDeltaSeconds(), InterpSpeed);
 	}
 
-	// ECollisionChannel은 DefaultEngine.ini파일에서 확인 가능합니다.
-	// ECollisionChannel::ECC_GameTraceChannel1: Target Trace Channel입니다.
-	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResult, PlayerLocation, PlayerLocation, FQuat::Identity, ECollisionChannel::ECC_GameTraceChannel1, FCollisionShape::MakeSphere(MaxTargetDistance));
+	return RInterpToRotator;
+}
 
-	TArray<AActor*> TargetLockableActors;
+TArray<AActor*> UPTLTargetLockComponent::GetTargetableActors()
+{
+	FVector PlayerLocation = GetOwner()->GetActorLocation();
+
+	// 탐지 가능한 범위를 드로우 디버그합니다.
+	if (bDrawDebug)
+	{
+		float DebugSize = 50.0f;
+
+		DrawDebugSphere(GetWorld(), PlayerLocation, MaxTargetDistance, DebugSize, FColor::Green, false, DrawDebugTime);
+	}
+
+	TArray<FHitResult> HitResults;
+	TArray<AActor*> TargetableActors;
+	// ECC_GameTraceChannel1 = Target Trace Channel
+	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, PlayerLocation, PlayerLocation, FQuat::Identity, ECollisionChannel::ECC_GameTraceChannel1, FCollisionShape::MakeSphere(MaxTargetDistance));
 	if (bIsHit)
 	{
-		for (auto& Hit : HitResult)
+		for (auto& Hit : HitResults)
 		{
-			APTLEnemy* HitedActor = Cast<APTLEnemy>(Hit.Actor);
-			if (Hit.Actor.IsValid() && !HitedActor->GetStateComponent()->GetIsDead())
+			APTLEnemy* HitedEnemy = Cast<APTLEnemy>(Hit.Actor);
+			if (HitedEnemy && HitedEnemy->GetStateComponent()->GetIsDead() != true)
 			{
 				if (bDrawDebug)
 				{
-					DrawDebugPoint(GetWorld(), HitedActor->GetTargetComponent()->GetComponentLocation(), 30.0f, FColor::Green, false, DebugLifeTime);
-					PTL_LOG_SCREEN("Hit Actor: %s", *HitedActor->GetName());
+					float DebugSize = 30.0f;
+
+					DrawDebugPoint(GetWorld(), HitedEnemy->GetTargetComponent()->GetComponentLocation(), DebugSize, FColor::Green, false, DrawDebugTime);
 				}
 
-				// 중복되지 않게 TargetLockableActors 배열에 넣습니다.
-				TargetLockableActors.AddUnique(Cast<AActor>(Hit.Actor));
+				// 중복되지 않게 TargetalbeActors 배열에 넣습니다.
+				TargetableActors.AddUnique(Cast<AActor>(Hit.Actor));
 			}
 		}
 	}
-	else
-	{
-		PTL_LOG_SCREEN("Hit Failed!!");
-	}
 
-	return TargetLockableActors;
+	return TargetableActors;
 }
 
-AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
+AActor * UPTLTargetLockComponent::GetNearestTargetActor(TArray<AActor*> TargetableActors)
 {
 	// 조준 가능한 Target이 없을 경우 nullptr을 반환합니다.
 	if (TargetableActors.Num() == 0)
@@ -140,7 +144,8 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 
 	float NearestDot = 0.0f;
 	AActor* NearestTargetActor = nullptr;
-	APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
+	APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+
 	for (int32 i = 0; i < TargetableActors.Num(); ++i)
 	{
 		/*-----------------------------------------------------------------------------------------------------------------------------------*
@@ -153,6 +158,7 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 		 * 평행할 경우(0)일 경우 1, 서로 직각일 경우(90) 0, 평행이면서 반대 방향일 경우(180) -1를 반환합니다.
 		 * 실패하면 -2.0을 반환합니다.
 		 *-----------------------------------------------------------------------------------------------------------------------------------*/
+
 		float Dot = PlayerCameraManager->GetDotProductTo(TargetableActors[i]);
 		if (i == 0)
 		{
@@ -170,20 +176,23 @@ AActor * UPTLTargetLockComponent::SetTarget(TArray<AActor*> TargetableActors)
 		}
 	}
 
-	PTL_LOG_SCREEN("TargetActor: %s", *NearestTargetActor->GetName());
+	if (bDrawDebug)
+	{
+		PTL_LOG_SCREEN("TargetActor: %s", *NearestTargetActor->GetName());
+	}
 
 	return NearestTargetActor;
 }
 
-AActor * UPTLTargetLockComponent::SwitchTarget(EDirection Direction)
+AActor * UPTLTargetLockComponent::GetNearestTargetActorToDirection(EDirection Direction)
 {
-	AActor* NewTarget = nullptr;
+	AActor* NearestTargetActor = nullptr;
 
-	if (bLockedOnTarget)
+	if (bIsLockOnTarget)
 	{
 		TArray<AActor*> TargetableActors = GetTargetableActors();
 		int32 CurrentTargetIndex = TargetableActors.Find(TargetActor);
-		// 현재 타겟의 Index를 발견하였다면 배열에서 제거합니다.
+		// 현재 Target의 Index를 발견하였다면 배열에서 제거합니다.
 		if (CurrentTargetIndex != INDEX_NONE)
 		{
 			TargetableActors.Remove(TargetActor);
@@ -193,86 +202,93 @@ AActor * UPTLTargetLockComponent::SwitchTarget(EDirection Direction)
 		TArray<AActor*> LeftTargetableActors;
 		TArray<AActor*> RightTargetableActors;
 		APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
-		for (int32 i = 0; i < TargetableActors.Num(); ++i)
+
+		for (AActor* TargetableActor : TargetableActors)
 		{
 			/*-----------------------------------------------------------------------------------------------------------------------------------*
 			 * 벡터의 뺄셈을 활용하여 내가 타겟을 바라보는 방향을 구합니다.
 			 * 내가 타겟을 바라보는 방향 = 타겟의 위치 - 자신의 위치
 			 *-----------------------------------------------------------------------------------------------------------------------------------*/
-			FVector TargetableActorVector = TargetableActors[i]->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
-			FVector CurrentTargetActorVector = TargetActor->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
+
+			FVector LookAtTargetableActorVector = TargetableActor->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
+			FVector LookAtCurrentTargetActorVector = TargetActor->GetActorLocation() - PlayerCameraManager->GetCameraLocation();
 
 			// 두 벡터의 외적을 반환합니다.
-			FVector CrossVector = FVector::CrossProduct(CurrentTargetActorVector, TargetableActorVector);
+			FVector CrossVector = FVector::CrossProduct(LookAtCurrentTargetActorVector, LookAtTargetableActorVector);
 			// 정규화한 벡터의 Z축으로 좌우에 존재하는지 판별합니다.
 			if (CrossVector.GetSafeNormal().Z < 0.0f)
 			{
-				// LeftTargetableActors 배열에 존재하지 않으면 추가합니다.
-				LeftTargetableActors.AddUnique(TargetableActors[i]);
+				// 내가 바라보는 방향을 기준으로 왼쪽에 존재하고 LeftTargetableActors 배열에 존재하지 않을 경우 배열에 추가합니다.
+				LeftTargetableActors.AddUnique(TargetableActor);
 			}
 			else
 			{
-				// RightTargetableActors 배열에 존재하지 않으면 추가합니다.
-				RightTargetableActors.AddUnique(TargetableActors[i]);
+				// 내가 바라보는 방향을 기준으로 오른쪽에 존재하고 RightTargetableActors 배열에 존재하지 않을 경우 배열에 추가합니다.
+				RightTargetableActors.AddUnique(TargetableActor);
 			}
 		}
 
 		switch (Direction)
 		{
-		case EDirection::Left:
+		case EDirection::Direction_Left:
 			if (LeftTargetableActors.Num() > 0)
 			{
-				NewTarget = SetTarget(LeftTargetableActors);
+				NearestTargetActor = GetNearestTargetActor(LeftTargetableActors);
 			}
 			else
 			{
-				NewTarget = SetTarget(RightTargetableActors);
+				NearestTargetActor = GetNearestTargetActor(RightTargetableActors);
 			}
 			break;
-		case EDirection::Right:
+		case EDirection::Direction_Right:
 			if (RightTargetableActors.Num() > 0)
 			{
-				NewTarget = SetTarget(RightTargetableActors);
+				NearestTargetActor = GetNearestTargetActor(RightTargetableActors);
 			}
 			else
 			{
-				NewTarget = SetTarget(LeftTargetableActors);
+				NearestTargetActor = GetNearestTargetActor(LeftTargetableActors);
 			}
 			break;
+		default:
+			break;
+		}
+	}
+
+	return NearestTargetActor;
+}
+
+AActor * UPTLTargetLockComponent::GetTargetActor() const
+{
+	return TargetActor;
+}
+
+void UPTLTargetLockComponent::SetTargetActor(AActor * NewTargetActor)
+{
+	if (NewTargetActor)
+	{
+		TargetActor = NewTargetActor;
+		bIsLockOnTarget = true;
+
+		APTLCharacterBase* Player = Cast<APTLCharacterBase>(GetOwner());
+		if (Player)
+		{
+			Player->GetCharacterMovement()->bOrientRotationToMovement = false;
+			Player->GetCharacterMovement()->bUseControllerDesiredRotation = true;
 		}
 
-	}
+		if (bDrawDebug)
+		{
+			APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
+			float DebugSize = 30.0f;
 
-	return NewTarget;
+			DrawDebugPoint(GetWorld(), TargetEnemy->GetTargetComponent()->GetComponentLocation(), DebugSize, FColor::Red, false, DrawDebugTime);
+		}
+	}
 }
 
-// Target에 대해 회전보간값을 계산합니다.
-FRotator UPTLTargetLockComponent::RInterpToTarget()
+bool UPTLTargetLockComponent::GetIsLockOnTarget() const
 {
-	//APTLPlayerController* PlayerController = Cast<APTLPlayerController>(GetWorld()->GetFirstPlayerController());
-	APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
-	FRotator PlayerControllerRotator = PlayerController->GetControlRotation();
-	FVector PlayerLocation = GetOwner()->GetActorLocation();
-	FVector TargetActorLocation = TargetActor->GetActorLocation();
-
-	// 2개의 위치 벡터를 입력하여 2번째 위치 벡터를 바라보는 방향정보(Rotator)를 리턴합니다.
-	FRotator TargetRotator = UKismetMathLibrary::FindLookAtRotation(PlayerLocation, TargetActorLocation);
-
-	FRotator RInterpToRotator = FMath::RInterpTo(PlayerControllerRotator, TargetRotator, GetWorld()->GetDeltaSeconds(), 5.0f);
-
-	return RInterpToRotator;
+	return bIsLockOnTarget;
 }
 
-void UPTLTargetLockComponent::SetDebug()
-{	
-	if (bDrawDebug)
-	{
-		bDrawDebug = false;
-		PTL_LOG_SCREEN("DrawDebug Disabled!!");
-	}
-	else
-	{
-		bDrawDebug = true;
-		PTL_LOG_SCREEN("DrawDebug Enabled!!");
-	}
-}

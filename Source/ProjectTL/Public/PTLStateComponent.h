@@ -1,16 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-/*=========================================================================*
- * 캐릭터의 상태를 나타내는 클래스입니다.
- *=========================================================================*/
-
 #pragma once
 
 #include "ProjectTL.h"
 #include "Components/ActorComponent.h"
 #include "PTLStateComponent.generated.h"
 
-
+/*=========================================================================*
+ * 캐릭터의 상태를 나타내는 클래스입니다.
+ *=========================================================================*/
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROJECTTL_API UPTLStateComponent : public UActorComponent
 {
@@ -24,12 +22,6 @@ private:
 	bool bIsDead;
 
 public:
-	FORCEINLINE bool GetIsDead() const
-	{
-		return bIsDead;
-	}
-	FORCEINLINE void SetIsDead(bool bFlag)
-	{
-		bIsDead = bFlag;
-	}
+	bool GetIsDead() const;
+	void SetIsDead(bool bFlag);
 };

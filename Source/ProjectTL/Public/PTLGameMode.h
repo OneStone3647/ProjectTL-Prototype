@@ -6,9 +6,6 @@
 #include "GameFramework/GameModeBase.h"
 #include "PTLGameMode.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class PROJECTTL_API APTLGameMode : public AGameModeBase
 {

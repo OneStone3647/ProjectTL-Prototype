@@ -1,12 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-/*=========================================================================*
- * 적 클래스입니다.
- *=========================================================================*/
-
 #include "PTLEnemy.h"
 #include "PTLTargetComponent.h"
-#include "PTLStateComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"

@@ -22,9 +22,6 @@ APTLPlayer::APTLPlayer()
 
 	BaseTurnRate = 45.0f;
 	BaseLookUpRate = 45.0f;
-	TargetSwitchMouseValue = 3.0f;
-	TargetSwitchAnalogValue = 0.2f;
-	TargetSwitchMinDelaySeconds = 0.5f;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -47,35 +44,23 @@ APTLPlayer::APTLPlayer()
 
 	// TargetLockComponent 설정
 	TargetLockComponent = CreateDefaultSubobject<UPTLTargetLockComponent>(TEXT("TargetLockComponent"));
+	MouseValueToSwitchTarget = 3.0f;
+	AnalogValueToSwitchTarget = 0.2f;
+	MinDelaySecondsToSwitchTarget = 0.5f;
+}
+
+void APTLPlayer::BeginPlay()
+{
+	Super::BeginPlay();
+
+	PlayerController = Cast<APTLPlayerController>(GetController());
 }
 
 void APTLPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (TargetLockComponent->GetLockOnTargetFlag())
-	{
-		AActor* TargetActor = TargetLockComponent->GetTargetActor();
-		if (IsValid(TargetActor))
-		{
-			APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetActor);
-			if (!TargetEnemy->GetStateComponent()->GetIsDead())
-			{
-				APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
-				PlayerController->SetControlRotation(TargetLockComponent->RInterpToTarget());
-			}
-			else
-			{
-				TargetLockComponent->UnlockTarget();
-				TargetLockComponent->LockOnTarget();
-			}
-		}
-		else
-		{
-			TargetLockComponent->UnlockTarget();
-			TargetLockComponent->LockOnTarget();
-		}
-	}
+	LockOnTarget();
 }
 
 void APTLPlayer::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
@@ -101,6 +86,27 @@ void APTLPlayer::SetupPlayerInputComponent(UInputComponent * PlayerInputComponen
 	PlayerInputComponent->BindAction("TargetLock", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnTarget);
 	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchLeft", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnSwitchTarget, EDirection::Left);
 	//PlayerInputComponent->BindAction<TBaseDelegate<void, EDirection>>("TargetSwitchRight", IE_Pressed, TargetLockComponent, &UPTLTargetLockComponent::LockOnSwitchTarget, EDirection::Right);
+}
+
+void APTLPlayer::LockOnTarget()
+{
+	if (TargetLockComponent->GetIsLockOnTarget() == true)
+	{
+		APTLEnemy* TargetEnemy = Cast<APTLEnemy>(TargetLockComponent->GetTargetActor());
+		if (TargetEnemy->GetStateComponent()->GetIsDead() != true)
+		{
+			// APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+			if (PlayerController)
+			{
+				PlayerController->SetControlRotation(TargetLockComponent->RInterpToTarget());
+			}
+		}
+		else
+		{
+			TargetLockComponent->UnLockOnTarget();
+			TargetLockComponent->LockOnTarget();
+		}
+	}
 }
 
 void APTLPlayer::MoveForward(float Value)
@@ -134,23 +140,23 @@ void APTLPlayer::MoveRight(float Value)
 
 void APTLPlayer::Turn(float Value)
 {
-	float TimeSinceLastTargetSwitch = GetWorld()->GetRealTimeSeconds() - LastTargetSwitchTime;
-
-	if (TargetLockComponent->GetLockOnTargetFlag())
+	if (TargetLockComponent->GetIsLockOnTarget() == true)
 	{
-		// 한 번의 움직임으로 여러 번 전환 되는 것을 방지합니다.
-		if (FMath::Abs(Value) > TargetSwitchMouseValue	&& TimeSinceLastTargetSwitch > TargetSwitchMinDelaySeconds)
+		// 마지막으로 Target을 바꾼 이후의 시간
+		float SinceTimeLastSwitchTarget = GetWorld()->GetRealTimeSeconds() - LastTimeSwitchTarget;
+
+		if (FMath::Abs(Value) > MouseValueToSwitchTarget && SinceTimeLastSwitchTarget > MinDelaySecondsToSwitchTarget)
 		{
 			if (Value < 0)
 			{
-				TargetLockComponent->LockOnSwitchTarget(EDirection::Left);
+				TargetLockComponent->SwitchLockOnTarget(EDirection::Direction_Left);
 			}
 			else
 			{
-				TargetLockComponent->LockOnSwitchTarget(EDirection::Right);
+				TargetLockComponent->SwitchLockOnTarget(EDirection::Direction_Right);
 			}
 
-			LastTargetSwitchTime = GetWorld()->GetRealTimeSeconds();
+			LastTimeSwitchTarget = GetWorld()->GetRealTimeSeconds();
 		}
 	}
 	else
@@ -161,7 +167,7 @@ void APTLPlayer::Turn(float Value)
 
 void APTLPlayer::LookUp(float Value)
 {
-	if (!TargetLockComponent->GetLockOnTargetFlag())
+	if (TargetLockComponent->GetIsLockOnTarget() != true)
 	{
 		APawn::AddControllerPitchInput(Value);
 	}
@@ -169,37 +175,37 @@ void APTLPlayer::LookUp(float Value)
 
 void APTLPlayer::TurnAtRate(float Rate)
 {
-	// 마지막 타겟 전환 후 아날로그 스틱이 중립으로 돌아 왔는지 확인합니다.
+	// 마지막 Target 전환 후 아날로그 스틱이 중립으로 돌아 왔는지 확인합니다.
 	if (FMath::Abs(Rate) < 0.1f)
 	{
-		bAnalogSettledSinceLastTargetSwitch = true;
+		bAnalogSettledSinceLastSwitchTarget = true;
 	}
 
-	if (TargetLockComponent->GetLockOnTargetFlag() && FMath::Abs(Rate) > TargetSwitchAnalogValue && bAnalogSettledSinceLastTargetSwitch)
+	if (TargetLockComponent->GetIsLockOnTarget() == true)
 	{
-		if (Rate < 0)
+		if (FMath::Abs(Rate) > AnalogValueToSwitchTarget && bAnalogSettledSinceLastSwitchTarget)
 		{
-			TargetLockComponent->LockOnSwitchTarget(EDirection::Left);
-		}
-		else
-		{
-			TargetLockComponent->LockOnSwitchTarget(EDirection::Right);
-		}
+			if (Rate < 0)
+			{
+				TargetLockComponent->SwitchLockOnTarget(EDirection::Direction_Left);
+			}
+			else
+			{
+				TargetLockComponent->SwitchLockOnTarget(EDirection::Direction_Right);
+			}
 
-		bAnalogSettledSinceLastTargetSwitch = false;
+			bAnalogSettledSinceLastSwitchTarget = false;
+		}
 	}
 	else
 	{
-		if (!TargetLockComponent->GetLockOnTargetFlag())
-		{
-			AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
-		}
+		AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 	}
 }
 
 void APTLPlayer::LookUpAtRate(float Rate)
 {
-	if (!TargetLockComponent->GetLockOnTargetFlag())
+	if (TargetLockComponent->GetIsLockOnTarget() != true)
 	{
 		AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 	}

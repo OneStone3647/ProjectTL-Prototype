@@ -1,15 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-/*=========================================================================*
- * 적 클래스입니다.
- *=========================================================================*/
-
 #pragma once
 
 #include "ProjectTL.h"
 #include "PTLCharacterBase.h"
 #include "PTLEnemy.generated.h"
 
+/*=========================================================================*
+ * 적 클래스입니다.
+ *=========================================================================*/
 UCLASS()
 class PROJECTTL_API APTLEnemy : public APTLCharacterBase
 {
@@ -24,7 +23,7 @@ protected:
 #pragma region Target
 
 protected:
-	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category = Target)
+	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category = "Target")
 	class UPTLTargetComponent* TargetComponent;
 
 public:
@@ -38,7 +37,7 @@ public:
 #pragma region TextRender
 
 protected:
-	UPROPERTY(VisibleAnywhere, BluePrintReadWrite, Category = TextRender)
+	UPROPERTY(VisibleAnywhere, BluePrintReadWrite, Category = "TextRender")
 	class UTextRenderComponent* ActorNameText;
 
 protected:

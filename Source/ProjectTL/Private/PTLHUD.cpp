@@ -30,10 +30,11 @@ void APTLHUD::DrawHUD()
 	APTLPlayerController* PlayerController = Cast<APTLPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 	APTLPlayer* Player = Cast<APTLPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	APTLEnemy* TargetEnemy = Cast<APTLEnemy>(Player->GetTargetLockComponent()->GetTargetActor());
-	if (IsValid(TargetEnemy) && IndicatorTexture)
+	if (TargetEnemy)
 	{
 		FVector2D ScreenLocation;
 		UGameplayStatics::ProjectWorldToScreen(PlayerController, TargetEnemy->GetTargetComponent()->GetComponentLocation(), ScreenLocation, false);
+
 		ScreenLocation = FVector2D(ScreenLocation.X - IndicatorSize / 2.0f, ScreenLocation.Y - IndicatorSize / 2.0f);
 
 		DrawTexture(IndicatorTexture, ScreenLocation.X, ScreenLocation.Y, IndicatorSize, IndicatorSize, 0.0f, 0.0f, 1.0f, 1.0f);
